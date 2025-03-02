@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Linha do Tempo de Eventos</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 text-gray-900 p-6">
+
+  <div class="max-w-4xl mx-auto bg-white shadow-lg rounded-lg p-6">
+    <h1 class="text-2xl font-bold text-center mb-6">Linha do Tempo de Eventos</h1>
+
+    <div id="progress-container" class="mb-6">
+      <label class="block text-lg font-semibold">Progresso do processamento:</label>
+      <div class="flex items-center gap-2">
+        <progress id="progress-bar" value="0" max="100" class="w-full h-3 bg-gray-300 rounded"></progress>
+        <span id="progress-text" class="text-gray-700 font-medium">0%</span>
+      </div>
+    </div>
+
+    <div id="completed-message" class="hidden text-green-600 font-bold text-lg text-center">
+      ✅ Processamento concluído!
+    </div>
+
+    <div class="mb-6">
+      <label for="ip-select" class="block text-lg font-semibold mb-2">Selecione um IP:</label>
+      <select id="ip-select" class="w-full p-2 border border-gray-300 rounded focus:ring focus:ring-blue-300">
+        <option value="">-- Selecione um IP --</option>
+      </select>
+    </div>
+
+    <!-- Gráfico -->
+    <div class="bg-gray-50 p-4 rounded-lg shadow-md">
+      <canvas id="timelineChart"></canvas>
+    </div>
+  </div>
+
+  <script>
+    function updateProgress() {
+      fetch('/api/progress')
+        .then(response => response.json())
+        .then(data => {
+          if (data.progress >= 100) {
+            document.getElementById('progress-container').classList.add('hidden');
+            document.getElementById('completed-message').classList.remove('hidden');
+          } else {
+            document.getElementById('progress-text').innerText = data.progress.toFixed(2) + '%';
+            document.getElementById('progress-bar').value = data.progress;
+            setTimeout(updateProgress, 1000);
+          }
+        });
+    }
+    updateProgress();
+
+    function loadIPs() {
+      fetch('/api/ips')
+        .then(response => response.json())
+        .then(data => {
+          if (!Array.isArray(data)) {
+            console.error("Erro: lista de IPs inválida", data);
+            return;
+          }
+          let select = document.getElementById('ip-select');
+          select.innerHTML = '<option value="">-- Selecione um IP --</option>';
+          data.forEach(ip => {
+            let option = document.createElement('option');
+            option.value = ip;
+            option.text = ip;
+            select.appendChild(option);
+          });
+        });
+    }
+    setInterval(loadIPs, 5000);
+    loadIPs();
+
+    let ctx = document.getElementById('timelineChart').getContext('2d');
+    let timelineChart = new Chart(ctx, {
+      type: 'line',
+      data: { labels: [], datasets: [{ label: 'Eventos', data: [], borderColor: '#3b82f6', tension: 0.1 }] },
+      options: {
+        scales: {
+          x: { type: 'time', time: { unit: 'minute' }, title: { display: true, text: 'Tempo' } },
+          y: { title: { display: true, text: 'Número de Eventos' } }
+        }
+      }
+    });
+
+    function loadTimeline(ip) {
+      fetch('/api/timeline?ip=' + encodeURIComponent(ip))
+        .then(response => response.json())
+        .then(data => {
+          let labels = data.map(item => item.minute);
+          let counts = data.map(item => item.count);
+          timelineChart.data.labels = labels;
+          timelineChart.data.datasets[0].data = counts;
+          timelineChart.update();
+        });
+    }
+
+    function updateGraph() {
+      let selectedIP = document.getElementById('ip-select').value;
+      if(selectedIP) {
+        loadTimeline(selectedIP);
+      }
+      setTimeout(updateGraph, 5000);
+    }
+    updateGraph();
+
+    document.getElementById('ip-select').addEventListener('change', function() {
+      let selectedIP = this.value;
+      if (selectedIP) {
+        loadTimeline(selectedIP);
+      }
+    });
+  </script>
+
+</body>
+</html>
