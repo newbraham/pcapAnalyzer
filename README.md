@@ -1,3 +1,3 @@
 # Description
 
-Just a little projetct to learn go
+Just a little project to learn go

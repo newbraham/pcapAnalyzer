@@ -31,90 +31,43 @@
       </select>
     </div>
 
-    <!-- Gráfico -->
-    <div class="bg-gray-50 p-4 rounded-lg shadow-md">
+    <div class="mb-6">
+      <label for="protocol-select" class="block text-lg font-semibold mb-2">Selecione um Protocolo:</label>
+      <select id="protocol-select" class="w-full p-2 border border-gray-300 rounded focus:ring focus:ring-blue-300">
+        <option value="">-- Todos Protocolos --</option>
+      </select>
+    </div>
+
+    <div class="mb-6">
+      <label for="view-mode-select" class="block text-lg font-semibold mb-2">Modo de Visualização:</label>
+      <select id="view-mode-select" class="w-full p-2 border border-gray-300 rounded focus:ring focus:ring-blue-300">
+        <option value="summarized">Resumida</option>
+        <option value="complete">Completa</option>
+      </select>
+    </div>
+
+    <div id="chart-container" class="bg-gray-50 p-4 rounded-lg shadow-md" style="height: 400px;">
       <canvas id="timelineChart"></canvas>
     </div>
   </div>
 
-  <script>
-    function updateProgress() {
-      fetch('/api/progress')
-        .then(response => response.json())
-        .then(data => {
-          if (data.progress >= 100) {
-            document.getElementById('progress-container').classList.add('hidden');
-            document.getElementById('completed-message').classList.remove('hidden');
-          } else {
-            document.getElementById('progress-text').innerText = data.progress.toFixed(2) + '%';
-            document.getElementById('progress-bar').value = data.progress;
-            setTimeout(updateProgress, 1000);
-          }
-        });
-    }
-    updateProgress();
+  <div id="events-table-container" class="mt-6">
+    <h2 class="text-xl font-semibold mb-2">Lista de Eventos</h2>
+    <table id="events-table" class="min-w-full bg-white border">
+      <thead>
+        <tr>
+          <th class="px-4 py-2 border">Timestamp</th>
+          <th class="px-4 py-2 border">IP</th>
+          <th class="px-4 py-2 border">Protocolo</th>
+        </tr>
+      </thead>
+      <tbody>
+      </tbody>
+    </table>
+  </div>
 
-    function loadIPs() {
-      fetch('/api/ips')
-        .then(response => response.json())
-        .then(data => {
-          if (!Array.isArray(data)) {
-            console.error("Erro: lista de IPs inválida", data);
-            return;
-          }
-          let select = document.getElementById('ip-select');
-          select.innerHTML = '<option value="">-- Selecione um IP --</option>';
-          data.forEach(ip => {
-            let option = document.createElement('option');
-            option.value = ip;
-            option.text = ip;
-            select.appendChild(option);
-          });
-        });
-    }
-    setInterval(loadIPs, 5000);
-    loadIPs();
 
-    let ctx = document.getElementById('timelineChart').getContext('2d');
-    let timelineChart = new Chart(ctx, {
-      type: 'line',
-      data: { labels: [], datasets: [{ label: 'Eventos', data: [], borderColor: '#3b82f6', tension: 0.1 }] },
-      options: {
-        scales: {
-          x: { type: 'time', time: { unit: 'minute' }, title: { display: true, text: 'Tempo' } },
-          y: { title: { display: true, text: 'Número de Eventos' } }
-        }
-      }
-    });
-
-    function loadTimeline(ip) {
-      fetch('/api/timeline?ip=' + encodeURIComponent(ip))
-        .then(response => response.json())
-        .then(data => {
-          let labels = data.map(item => item.minute);
-          let counts = data.map(item => item.count);
-          timelineChart.data.labels = labels;
-          timelineChart.data.datasets[0].data = counts;
-          timelineChart.update();
-        });
-    }
-
-    function updateGraph() {
-      let selectedIP = document.getElementById('ip-select').value;
-      if(selectedIP) {
-        loadTimeline(selectedIP);
-      }
-      setTimeout(updateGraph, 5000);
-    }
-    updateGraph();
-
-    document.getElementById('ip-select').addEventListener('change', function() {
-      let selectedIP = this.value;
-      if (selectedIP) {
-        loadTimeline(selectedIP);
-      }
-    });
-  </script>
+  <script src="/static/timeline.js"></script>
 
 </body>
 </html>
